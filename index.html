@@ -1,0 +1,491 @@
+<html lang="en">
+
+<meta charset="UTF-8">
+
+<head>
+    <script src="jquery-3.2.1.min.js"></script>
+    <!-- <script src="d3.min.js"></script> -->
+    <script>
+        $(function () {
+            // const wcs = [0, 1, 2, 3, 4, 5]
+            //     .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
+            // var ops = []
+            //     const ops = [
+            //     { wcs: [0, 1, 2], d: 35 },
+            //     { wcs: [1, 2, 3, 4], d: 55 },
+            //     { wcs: [2], d: 15 },
+            //     { wcs: [2, 3], d: 35 },
+            //     { wcs: [0, 3], d: 35 },
+            //     { wcs: [3, 5], d: 30 },
+            //     { wcs: [1, 3, 4], d: 20 },
+            // ]
+            // var ops = [
+            // { wcs: [0, 1], d: 35 },
+            // { wcs: [0, 1], d: 35 },
+            // { wcs: [0, 1], d: 25 },
+            // { wcs: [1, 2], d: 35 },
+            // { wcs: [1, 2], d: 25 },
+            // { wcs: [1, 2], d: 30 },
+            // ]
+            // let opCount = document.getElementById('opCount').value
+            // for (let i = 0; i < opCount; i++) {
+            //     let ws = []
+            //     for (let j = 0; j < Math.random()*wcs.length; j++) {
+            //         wcId = Math.floor(Math.random()*wcs.length)
+            //         if(!ws.includes(wcId))
+            //             ws.push(wcId)                    
+            //     }
+            //     ops.push({wcs:ws, d: Math.random()*10})                
+            // }
+            // ops= ops.map((op, i) => {
+            //         op.id = i
+            //         op.wcs = op.wcs.map(i => { return { i, wc: wcs[i] } })
+            //         op.wcCount = op.wcs.length
+            //         return op
+            //     })
+            // .sort((a, b) => a.d - b.d)
+            // const wcArr = ops.reduce((a, op, jobIndex) => {
+            //     op.wcs.forEach(wc => {
+            //         // if(a[wc])
+            //         const job = { d: op.d, op, deleted: false }
+            //         a[wc.i].jobs.push(job)
+            //         a[wc.i].sec += op.d
+            //         wc.job = job
+            //     })
+            //     return a;
+            // }, wcs);
+            // InitChart(wcArr, m);
+            $("button").click(function () {
+                // const a = opt2(wcArr, ops)
+                // const a = opt(wcArr)
+                //const a = opt3(wcArr)
+                let wcCount = document.getElementById('wcCount').value
+                var wcs = []
+                // .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
+                for (let i = 0; i < wcCount; i++) {
+                    wcs.push({ id: i, sec: 0, jobs: [] })
+                }
+                var ops = []
+                let opCount = document.getElementById('opCount').value
+                for (let i = 0; i < opCount; i++) {
+                    let ws = []
+                    for (let j = 0; j < Math.random() * wcCount; j++) {
+                        wcId = Math.floor(Math.random() * wcCount)
+                        if (!ws.includes(wcId))
+                            ws.push(wcId)
+                    }
+                    ops.push({ wcs: ws.sort(), d: 1 + Math.floor(Math.random() * 100) })
+                }
+                // var ops = [
+                //     { wcs: [0, 1], d: 35 },
+                //     { wcs: [0, 1], d: 35 },
+                //     { wcs: [0, 1], d: 25 },
+                //     { wcs: [1, 2], d: 35 },
+                //     { wcs: [1, 2], d: 25 },
+                //     { wcs: [1, 2], d: 30 },
+                // ]
+
+                console.log(ops)
+                ops = ops.map((op, i) => {
+                    op.id = i
+                    op.wcs = op.wcs.map(i => { return { i, wc: wcs[i] } })
+                    op.wcCount = op.wcs.length
+                    return op
+                })
+                const gants = document.getElementById('gants')
+                gants.innerText = ''
+                const best = opt6(ops, wcs)
+
+                var wcs = []
+                // .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
+                for (let i = 0; i < wcCount; i++) {
+                    wcs.push({ id: i, sec: 0, jobs: [] })
+                }
+                const a = opt4(ops, wcs)
+                // InitChart(a, m);
+            });
+        });
+
+        function opt(wcArr) {
+            var vars = 1;
+            var sortedWcs = wcArr.slice().sort((a, b) => a.sec < b.sec)
+            InitChart(sortedWcs);
+            // while (vars>0){
+            for (let i = 0; i < sortedWcs.length - 1; i++) {
+                const wc = sortedWcs[i];
+                for (let j = 0; j < wc.jobs.length; j++) {
+                    const job = wc.jobs[j];
+                    if (job.op.wc) continue;
+                    var A = job.op.wcs
+                    var MinWc = A[0];
+
+                    for (var X = 1; X < A.length; X++)
+                        if (MinWc.wc.sec > A[X].wc.sec) {
+                            MinWc.wc.sec -= job.d
+                            MinWc.job.deleted = true
+                            MinWc = A[X];
+                        } else {
+                            A[X].wc.sec -= job.d
+                            A[X].job.deleted = true
+                        }
+                    job.op.wc = MinWc
+                    // if (job.op.wcCount == 1) {
+                    //     job.op.wc = i
+                    // } else {
+                    //     job.deleted = true;
+                    //     wc.sec -= job.d
+                    // }
+                    // job.op.wcCount--;
+                    if (wc.sec < sortedWcs[i + 1].sec)
+                        break;
+                }
+                InitChart(sortedWcs);
+            }
+            return sortedWcs
+        }
+
+        function opt4(ops, wcs, wcArr) {
+            // for (let wcLen = 1; wcLen <= wcs.length; wcLen++) 
+            {
+                ops
+                    // .filter(op => op.wcs.length == wcLen)
+                    // .sort((a, b) => a.wcs.length - b.wcs.length)
+                    // .sort((a, b) => b.wcs.length - a.wcs.length)
+                    .forEach((op) => {
+                        op.wcs.forEach(wc => {
+                            const job = { op, deleted: false, d: op.d / op.wcs.length }
+                            wcs[wc.i].jobs.push(job)
+                            wcs[wc.i].sec += job.d
+                            wc.job = job
+                        })
+                    });
+                InitChart(wcs);
+                // var sortedWcs = wcs.slice().sort((a, b) => b.sec - a.sec)
+                // InitChart(sortedWcs);
+                var ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                    .sort((a, b) => b.sec - a.sec)
+                while (ws.length > 1) {
+                    let bottleneck = ws[0]
+                    let nextBottleneck = ws[1]
+                    while (true) {
+                        let job = bottleneck.jobs
+                            // .sort((a, b) => a.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0) - b.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0))
+                            .sort((a, b) => {
+                                // return (a.op.wcCount < b.op.wcCount) ? -1 : 1
+                                // return (a.d < b.d) ? -1 : 1
+                                let dif =
+                                    a.op.wcs.reduce((s, w) => { return wcs[w.i].sec > s.sec ? wcs[w.i] : s }, a.op.wcs[0]).sec
+                                    -
+                                    b.op.wcs.reduce((s, w) => { return wcs[w.i].sec > s.sec ? wcs[w.i] : s }, a.op.wcs[0]).sec;
+                                // dif = 0
+                                return dif > 0 ? -1
+                                    : (dif < 0) ? 1
+                                        : (a.d > b.d) ? -1 : 1
+                            }
+                            )
+                            .find(job => job.d > 0 && job.op.wcCount > 1)
+                        InitChart(wcs);
+                        if (!job) break;
+                        bottleneck.sec -= job.d;
+                        job.op.wcCount--
+                        let newBottleneck;
+                        job.op.wcs
+                            .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                            .forEach(wc => {
+                                let sec = job.d / job.op.wcCount
+                                wcs[wc.i].sec += sec
+                                wc.job.d += sec
+                                if (wcs[wc.i].sec > bottleneck.sec) {
+                                    newBottleneck = wcs[wc.i];
+                                }
+                            })
+                        job.d = 0
+                        break
+                        if (newBottleneck) {
+                            let b = bottleneck
+                            bottleneck = (nextBottleneck.sec > newBottleneck.sec)
+                                ? nextBottleneck
+                                : newBottleneck
+                            nextBottleneck = b
+                        } else {
+                            if (nextBottleneck.sec > bottleneck.sec) {
+                                let b = bottleneck
+                                bottleneck = nextBottleneck
+                                nextBottleneck = b
+                            }
+                        }
+                    }
+
+                    ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                        .sort((a, b) => b.sec - a.sec)
+                    InitChart(wcs);
+                }
+            }
+            return wcs
+        }
+
+        function opt5(ops, wcs, wcArr) {
+            // const gants = document.getElementById('gants')
+            // gants.innerText = ''
+            ops
+                // .sort((a, b) => a.wcs.length - b.wcs.length)
+                // .sort((a, b) => b.wcs.length - a.wcs.length)
+                .forEach((op) => {
+                    op.wcs.forEach(wc => {
+                        const job = { op, deleted: false, d: op.d }
+                        wcs[wc.i].jobs.push(job)
+                        wcs[wc.i].sec += job.d
+                        wc.job = job
+                    })
+                });
+            var vars = 1;
+            InitChart(wcs);
+            // var sortedWcs = wcs.slice().sort((a, b) => b.sec - a.sec)
+            // InitChart(sortedWcs);
+            var ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                .sort((a, b) => b.sec - a.sec)
+            while (ws.length > 1) {
+                let bottleneck = ws[0]
+                // let nextBottleneck = ws[1]
+                while (true) {
+                    let job = bottleneck.jobs
+                        // .sort((a, b) => a.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0) - b.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0))
+                        .sort((a, b) => {
+                            // return (a.op.wcCount < b.op.wcCount) ? -1
+                            //     : (a.op.wcCount > b.op.wcCount) ? 1 :
+                            //         (a.d > b.d) ? -1 : 1
+                            // return (a.d < b.d) ? -1 : 1
+                            return a.op.wcs.reduce((s, w) => { return s.sec < wcs[w.i].sec ? s : wcs[w.i] }, a.op.wcs[0]).sec
+                                -
+                                b.op.wcs.reduce((s, w) => { return s.sec < wcs[w.i].sec ? s : wcs[w.i] }, a.op.wcs[0]).sec
+                        }
+                        )
+                        .find(job => job.d > 0 && job.op.wcCount > 1)
+                    InitChart(wcs);
+                    if (!job) break;
+                    bottleneck.sec -= job.d;
+                    job.op.wcCount--
+                    // let newBottleneck;
+                    // job.op.wcs
+                    //     .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                    //     .forEach(wc => {
+                    //         // let sec = job.d / job.op.wcCount
+                    //         // wcs[wc.i].sec += sec
+                    //         // wc.job.d += sec
+                    //         // if (wcs[wc.i].sec > bottleneck.sec) {
+                    //         //     newBottleneck = wcs[wc.i];
+                    //         // }
+                    //     })
+                    job.d = 0
+                    break
+                    // if (newBottleneck) {
+                    //     let b = bottleneck
+                    //     bottleneck = (nextBottleneck.sec > newBottleneck.sec)
+                    //         ? nextBottleneck
+                    //         : newBottleneck
+                    //     nextBottleneck = b
+                    // } else {
+                    //     if (nextBottleneck.sec > bottleneck.sec) {
+                    //         let b = bottleneck
+                    //         bottleneck = nextBottleneck
+                    //         nextBottleneck = b
+                    //     }
+                    // }
+                }
+
+                ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                    .sort((a, b) => b.sec - a.sec)
+                InitChart(wcs);
+            }
+            return wcs
+        }
+
+
+        function opt6(ops, wcs, wcArr) {
+            function f(jobs) {
+                let ww = jobs.reduce((ws, job, j) => { ws[job] += ops[j].d; return ws }, new Array(wcs.length).fill(0))
+                // let res = ww.reduce((s, wc) => s + wc * wc, 0)
+                // console.log(res)
+                let res = Math.max.apply(null, ww)
+                return res
+            }
+            function fn(jobs, jobIndex) {
+                if (jobIndex >= jobs.length)
+                    return jobs;
+                let bestJobs
+                let bestResult = Number.MAX_SAFE_INTEGER
+                ops[jobIndex].wcs.forEach(wc => {
+                    let nextJobs = jobs.slice()
+                    nextJobs[jobIndex] = wc.i
+                    let njobs = fn(nextJobs, jobIndex + 1)
+                    let res = f(njobs)
+                    if (res < bestResult) {
+                        bestJobs = njobs.slice()
+                        bestResult = res
+                        // console.log(`best=${res}`)
+                    }
+                })
+                return bestJobs
+            }
+            // const gants = document.getElementById('gants')
+            // gants.innerText = ''
+
+            let jobs = new Array(ops.length).fill(-1)
+            // let ws = wcs.map(w => 0)
+            var sol = fn(jobs, 0)
+            console.log(sol)
+
+
+            sol
+                // .sort((a, b) => a.wcs.length - b.wcs.length)
+                // .sort((a, b) => b.wcs.length - a.wcs.length)
+                .forEach((wcIndex, opIndex) => {
+                    let op = ops[opIndex]
+
+                    const job = { op, deleted: false, d: op.d }
+                    wcs[wcIndex].jobs.push(job)
+                    wcs[wcIndex].sec += job.d
+                    // wc.job = job
+                });
+            InitChart(wcs);
+            return wcs
+        }
+
+        function opt3(wcArr) {
+            var vars = 1;
+            var sortedWcs = wcArr.slice().sort((a, b) => a.sec < b.sec)
+            InitChart(sortedWcs);
+            while (vars > 0) {
+                for (let i = 0; i < sortedWcs.length - 1; i++) {
+                    const wc = sortedWcs[i];
+                    for (let j = 0; j < wc.jobs.length; j++) {
+                        const job = wc.jobs[j];
+                        if (job.op.wc) continue;
+                        var A = job.op.wcs
+                        var MinWc = A[0];
+
+                        for (var X = 1; X < A.length; X++)
+                            if (MinWc.wc.sec > A[X].wc.sec) {
+                                MinWc.wc.sec -= job.d
+                                MinWc.job.deleted = true
+                                MinWc = A[X];
+                            } else {
+                                A[X].wc.sec -= job.d
+                                A[X].job.deleted = true
+                            }
+                        job.op.wc = MinWc
+                        // if (job.op.wcCount == 1) {
+                        //     job.op.wc = i
+                        // } else {
+                        //     job.deleted = true;
+                        //     wc.sec -= job.d
+                        // }
+                        // job.op.wcCount--;
+                        if (wc.sec < sortedWcs[i + 1].sec)
+                            break;
+                    }
+                    InitChart(sortedWcs);
+                }
+            }
+            return sortedWcs
+        }
+
+        function opt2(wcArr, ops) {
+            var sortedWcs = wcArr.slice().sort((a, b) => a.sec < b.sec)
+            InitChart(sortedWcs);
+            for (let i = 0; i < ops.length; i++) {
+                const op = ops[i];
+                var A = op.wcs
+                var MinWc = A[0];
+
+                for (var X = 1; X < A.length; X++)
+                    if (MinWc.wc.sec > A[X].wc.sec) {
+                        MinWc.wc.sec -= op.d
+                        MinWc.job.deleted = true
+                        MinWc = A[X];
+                    } else {
+                        A[X].wc.sec -= op.d
+                        A[X].job.deleted = true
+                    }
+                op.wc = MinWc
+                InitChart(sortedWcs);
+            }
+            return sortedWcs
+        }
+
+        function intToRGB(value, alpha, max) {
+            var valueAsPercentageOfMax = value / max;
+            // actual max is 16777215 but represnts white so we will take a max that is
+            // below this to avoid white
+            var MAX_RGB_INT = 16600000;
+            var valueFromMaxRgbInt = Math.floor(MAX_RGB_INT * valueAsPercentageOfMax);
+
+            //credit to https://stackoverflow.com/a/2262117/2737978 for the idea of how to implement
+            var blue = Math.floor(valueFromMaxRgbInt % 256);
+            var green = Math.floor(valueFromMaxRgbInt / 256 % 256);
+            var red = Math.floor(valueFromMaxRgbInt / 256 / 256 % 256);
+
+            return "rgba(" + red + "," + green + "," + blue + "," + alpha + ")";
+        }
+
+        function InitChart(wcArr, m) {
+            // alert(v)
+            const gants = document.getElementById('gants')
+            // gant.innerText = ''
+            const gant = document.createElement('div')
+            gant.style.paddingTop = '20px'
+            gants.appendChild(gant)
+            wcArr.forEach((wc, wcI) => {
+                const div = document.createElement("div");
+                div.style.height = '20px';
+                div.style.display = 'flex'
+                const span0 = document.createElement('span')
+                span0.innerText = wc.id
+                div.appendChild(span0)
+                wc.jobs.filter(job => !job.deleted && job.d > 0).forEach(job => {
+                    const jobSpan = document.createElement('span')
+                    jobSpan.innerText = `${job.op.id}-${job.op.wcs.map(w => w.i).join(',')}`
+                    jobSpan.style.width = `${job.d * 5}px`
+                    jobSpan.style.backgroundColor = intToRGB(job.op.id + 1, 0.8, 9)
+                    jobSpan.style.display = 'inline-block'
+                    jobSpan.style.fontWeight = job.op.wc ? 'bold' : ''
+                    jobSpan.style.fontWeight = job.op.wcCount > 1 ? '' : 'bold'
+                    jobSpan.style.fontStyle = job.op.wc ? '' : 'italic'
+                    jobSpan.title = `${job.d}=${job.op.wcs.map(w => w.i).join(',')}`
+                    div.appendChild(jobSpan)
+                })
+                const spanSec = document.createElement('span')
+                spanSec.innerText = wc.sec
+                spanSec.style.backgroundColor = 'blue'
+                spanSec.style.marginLeft = '10px'
+                div.appendChild(spanSec)
+                gant.appendChild(div)
+            });
+
+        } 
+    </script>
+</head>
+
+<body>
+    <fieldset>
+        <label>operations count</label>
+        <input id="opCount" type="number" size="40">
+        <br>
+        <label>workcenters count</label>
+        <input id="wcCount" type="number" size="40">
+        <br>
+        <label> distance</label>
+        <input id="d" type="text" size="40" readonly>
+        <br>
+        <label>time</label>
+        <input id="t" type="text" size="40" readonly>
+        <br>
+        <button>Calculate</button>
+    </fieldset>
+    <!-- <svg id="svgVisualize" width="1000" height="500"></svg> -->
+    <div id="gants">
+
+    </div>
+</body>
+
+</html>
