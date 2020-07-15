@@ -3,10 +3,10 @@
 <meta charset="UTF-8">
 
 <head>
-    <script src="jquery-3.2.1.min.js"></script>
+    <!-- <script src="jquery-3.2.1.min.js"></script> -->
     <!-- <script src="d3.min.js"></script> -->
     <script>
-        $(function () {
+        document.addEventListener('DOMContentLoaded', function () {
             // const wcs = [0, 1, 2, 3, 4, 5]
             //     .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
             // var ops = []
@@ -55,7 +55,8 @@
             //     return a;
             // }, wcs);
             // InitChart(wcArr, m);
-            $("button").click(function () {
+            var button = document.getElementById("calcButton");
+            button.onclick = function () {
                 // const a = opt2(wcArr, ops)
                 // const a = opt(wcArr)
                 //const a = opt3(wcArr)
@@ -103,7 +104,7 @@
                 }
                 const a = opt4(ops, wcs)
                 // InitChart(a, m);
-            });
+            }
         });
 
         function opt(wcArr) {
@@ -480,7 +481,7 @@
         <label>time</label>
         <input id="t" type="text" size="40" readonly>
         <br>
-        <button>Calculate</button>
+        <button id='calcButton'>Calculate</button>
     </fieldset>
     <!-- <svg id="svgVisualize" width="1000" height="500"></svg> -->
     <div id="gants">
