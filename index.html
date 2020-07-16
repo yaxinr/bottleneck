@@ -168,23 +168,33 @@
                 while (ws.length > 1) {
                     let bottleneck = ws[0]
                     let nextBottleneck = ws[1]
+                    // let wcsBottleneckLess = wcs.slice()
+                    // wcsBottleneckLess.splice(bottleneck.id, 1)
                     while (true) {
                         let job = bottleneck.jobs
+                            .filter(job => job.d > 0 && job.op.wcCount > 1)
                             // .sort((a, b) => a.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0) - b.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0))
                             .sort((a, b) => {
                                 // return (a.op.wcCount < b.op.wcCount) ? -1 : 1
                                 // return (a.d < b.d) ? -1 : 1
                                 let dif =
-                                    a.op.wcs.reduce((s, w) => { return wcs[w.i].sec > s.sec ? wcs[w.i] : s }, a.op.wcs[0]).sec
+                                    a.op.wcs
+                                        .filter(wc => wc.i != bottleneck.id)
+                                        .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                                        .sec
                                     -
-                                    b.op.wcs.reduce((s, w) => { return wcs[w.i].sec > s.sec ? wcs[w.i] : s }, a.op.wcs[0]).sec;
+                                    b.op.wcs
+                                        .filter(wc => wc.i != bottleneck.id)
+                                        .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                                        .sec;
                                 // dif = 0
                                 return dif > 0 ? -1
                                     : (dif < 0) ? 1
                                         : (a.d > b.d) ? -1 : 1
                             }
                             )
-                            .find(job => job.d > 0 && job.op.wcCount > 1)
+                        [0]
+                        // .find(job => job.d > 0 && job.op.wcCount > 1)
                         InitChart(wcs);
                         if (!job) break;
                         bottleneck.sec -= job.d;
@@ -201,20 +211,21 @@
                                 }
                             })
                         job.d = 0
-                        break
-                        if (newBottleneck) {
-                            let b = bottleneck
-                            bottleneck = (nextBottleneck.sec > newBottleneck.sec)
-                                ? nextBottleneck
-                                : newBottleneck
-                            nextBottleneck = b
-                        } else {
-                            if (nextBottleneck.sec > bottleneck.sec) {
-                                let b = bottleneck
-                                bottleneck = nextBottleneck
-                                nextBottleneck = b
-                            }
-                        }
+                        if (newBottleneck || (nextBottleneck.sec > bottleneck.sec))
+                            break
+                        // if (newBottleneck) {
+                        //     let b = bottleneck
+                        //     bottleneck = (nextBottleneck.sec > newBottleneck.sec)
+                        //         ? nextBottleneck
+                        //         : newBottleneck
+                        //     nextBottleneck = b
+                        // } else {
+                        //     if (nextBottleneck.sec > bottleneck.sec) {
+                        //         let b = bottleneck
+                        //         bottleneck = nextBottleneck
+                        //         nextBottleneck = b
+                        //     }
+                        // }
                     }
 
                     ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
@@ -457,7 +468,7 @@
                 })
                 const spanSec = document.createElement('span')
                 spanSec.innerText = wc.sec
-                spanSec.style.backgroundColor = 'blue'
+                spanSec.style.backgroundColor = 'lime'
                 spanSec.style.marginLeft = '10px'
                 div.appendChild(spanSec)
                 gant.appendChild(div)
