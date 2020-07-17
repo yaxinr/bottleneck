@@ -61,13 +61,17 @@
                 // const a = opt(wcArr)
                 //const a = opt3(wcArr)
                 let wcCount = document.getElementById('wcCount').value
-                var wcs = []
+                var wcs0 = []
                 // .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
                 for (let i = 0; i < wcCount; i++) {
-                    wcs.push({ id: i, sec: 0, jobs: [] })
+                    let sec = 1 + Math.floor(Math.random() * 100)
+                    //let sec = 0
+                    const op = { id: -1, wcs: [i], d: sec, wcCount: 0 }
+                    const job = { op, d: sec }
+                    wcs0.push({ id: i, sec, jobs: [job] })
                 }
-                var ops = []
                 let opCount = document.getElementById('opCount').value
+                var ops0 = []
                 for (let i = 0; i < opCount; i++) {
                     let ws = []
                     for (let j = 0; j < Math.random() * wcCount; j++) {
@@ -75,9 +79,9 @@
                         if (!ws.includes(wcId))
                             ws.push(wcId)
                     }
-                    ops.push({ wcs: ws.sort(), d: 1 + Math.floor(Math.random() * 100) })
+                    ops0.push({ wcs: ws.sort(), d: 1 + Math.floor(Math.random() * 100) })
                 }
-                // var ops = [
+                // var ops0 = [
                 //     { wcs: [0, 1], d: 35 },
                 //     { wcs: [0, 1], d: 35 },
                 //     { wcs: [0, 1], d: 25 },
@@ -85,24 +89,30 @@
                 //     { wcs: [1, 2], d: 25 },
                 //     { wcs: [1, 2], d: 30 },
                 // ]
-
-                console.log(ops)
-                ops = ops.map((op, i) => {
+                const gants = document.getElementById('gants')
+                gants.innerText = ''
+                console.log(ops0)
+                ops = ops0.map((op, i) => {
                     op.id = i
-                    op.wcs = op.wcs.map(i => { return { i, wc: wcs[i] } })
+                    op.wcs = op.wcs.map(i => { return { i } })
                     op.wcCount = op.wcs.length
                     return op
                 })
-                const gants = document.getElementById('gants')
-                gants.innerText = ''
-                const best = opt6(ops, wcs)
+                if (true) {
+                    let wcs = wcs0
+                        .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
+                    // ops = ops0.map((op, i) => {
+                    //     op.id = i
+                    //     op.wcs = op.wcs.map(i => { return { i, wc: wcs[i] } })
+                    //     op.wcCount = op.wcs.length
+                    //     return op
+                    // })
 
-                var wcs = []
-                // .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
-                for (let i = 0; i < wcCount; i++) {
-                    wcs.push({ id: i, sec: 0, jobs: [] })
+                    const best = opt6(ops, wcs)
                 }
-                const a = opt4(ops, wcs)
+                var wcs = wcs0
+                    .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
+                const a = opt8(ops, wcs)
                 // InitChart(a, m);
             }
         });
@@ -145,6 +155,76 @@
             return sortedWcs
         }
 
+        function opt7(ops, wcs, wcArr) {
+            allJobs = []
+            ops.forEach((op) => {
+                op.wcs.forEach(wc => {
+                    const job = { op, d: op.d / op.wcs.length }
+                    wcs[wc.i].jobs.push(job)
+                    wcs[wc.i].sec += job.d
+                    wc.job = job
+                    allJobs.push(job)
+                })
+            });
+            InitChart(wcs);
+            let nextJobs = allJobs.filter(job => job.d > 0 && job.op.wcCount > 1).slice()
+            while (nextJobs.length) {
+                let sortedJobs = nextJobs.sort((a, b) => b.d - a.d)
+                let job = sortedJobs[0]
+                if (!job) break;
+                if (job.d <= 0 || job.op.wcCount <= 1) {
+                    nextJobs.splice(0, 1)
+                    continue
+                }
+                // let sortedOpWcs = job.op.wcs.sort((a, b) => wcs[a.i].sec - wcs[b.i].sec)
+                // // let sec = job.d / (job.op.wcCount - 1)
+                // sortedOpWcs.forEach((wc, i) => {
+                //     if (i == 0) {
+                //         wcs[wc.i].sec += job.op.d - job.d
+                //         wc.job.d = job.op.d
+                //     } else {
+                //         wcs[wc.i].sec -= job.d
+                //         wc.job.d = 0
+                //     }
+                // }
+                // )
+                // job.op.wcCount = 1
+
+                let sortedOpWcs = job.op.wcs
+                    .filter(wc => wc.job.d > 0)
+                    .sort((a, b) => wcs[b.i].sec - wcs[a.i].sec)
+                job.op.wcCount--
+                let sec = job.d / job.op.wcCount
+                sortedOpWcs.forEach((wc, i) => {
+                    if (i == 0) {
+                        wcs[wc.i].sec -= job.d
+                        wc.job.d = 0
+                    } else {
+                        wcs[wc.i].sec += sec
+                        wc.job.d += sec
+                    }
+                }
+                )
+                // job.d=0
+
+                // let bottleneck = job.op.wcs.reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                // bottleneck.sec -= job.d;
+                // job.op.wcCount--
+                // job.op.wcs
+                //     .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                //     .forEach(wc => {
+                //         let sec = job.d / job.op.wcCount
+                //         wcs[wc.i].sec += sec
+                //         wc.job.d += sec
+                //     })
+                // job.d = 0
+                nextJobs.splice(0, 1)
+                InitChart(wcs);
+            }
+            InitChart(wcs);
+            return wcs
+        }
+
         function opt4(ops, wcs, wcArr) {
             // for (let wcLen = 1; wcLen <= wcs.length; wcLen++) 
             {
@@ -154,7 +234,7 @@
                     // .sort((a, b) => b.wcs.length - a.wcs.length)
                     .forEach((op) => {
                         op.wcs.forEach(wc => {
-                            const job = { op, deleted: false, d: op.d / op.wcs.length }
+                            const job = { op, d: op.d / op.wcs.length }
                             wcs[wc.i].jobs.push(job)
                             wcs[wc.i].sec += job.d
                             wc.job = job
@@ -195,7 +275,7 @@
                             )
                         [0]
                         // .find(job => job.d > 0 && job.op.wcCount > 1)
-                        InitChart(wcs);
+                        // InitChart(wcs);
                         if (!job) break;
                         bottleneck.sec -= job.d;
                         job.op.wcCount--
@@ -230,9 +310,98 @@
 
                     ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
                         .sort((a, b) => b.sec - a.sec)
-                    InitChart(wcs);
+                    // InitChart(wcs);
                 }
             }
+            InitChart(wcs);
+            return wcs
+        }
+
+        function opt8(ops, wcs, wcArr) {
+            ops.forEach((op) => {
+                op.wcs.forEach(wc => {
+                    const job = { op, d: op.d / op.wcs.length }
+                    wcs[wc.i].jobs.push(job)
+                    wcs[wc.i].sec += job.d
+                    wc.job = job
+                })
+            });
+            InitChart(wcs);
+            // var sortedWcs = wcs.slice().sort((a, b) => b.sec - a.sec)
+            // InitChart(sortedWcs);
+            while (true) {
+                var ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                    .sort((a, b) => a.sec - b.sec)
+                if (ws.length < 2) break
+                let bottleneck = ws[0]
+                let nextBottleneck = ws[1]
+                // let wcsBottleneckLess = wcs.slice()
+                // wcsBottleneckLess.splice(bottleneck.id, 1)
+                // while (true) 
+                {
+                    let job = bottleneck.jobs
+                        .filter(job => job.d > 0 && job.op.wcCount > 1)
+                        // .sort((a, b) => a.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0) - b.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0))
+                        .sort((a, b) => {
+                             return (a.op.wcCount < b.op.wcCount) ? -1 : 1
+                            //return (a.d > b.d) ? -1 : 1
+                            let dif =
+                                a.op.wcs
+                                    .filter(wc => wc.i != bottleneck.id)
+                                    .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                                    .sec
+                                -
+                                b.op.wcs
+                                    .filter(wc => wc.i != bottleneck.id)
+                                    .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                                    .sec;
+                            // dif = 0
+                            return dif > 0 ? -1
+                                : (dif < 0) ? 1
+                                    : (a.d > b.d) ? -1 : 1
+                        }
+                        )
+                    [0]
+                    // .find(job => job.d > 0 && job.op.wcCount > 1)
+                    // InitChart(wcs);
+                    if (!job) break;
+
+                    let sortedOpWcs = job.op.wcs
+                        .filter(wc => wc.job.d > 0)
+                        .sort((a, b) => wcs[b.i].sec - wcs[a.i].sec)
+                    job.op.wcCount--
+                    let sec = job.d / job.op.wcCount
+                    sortedOpWcs.forEach((wc, i) => {
+                        if (i == 0) {
+                            wcs[wc.i].sec -= job.d
+                            wc.job.d = 0
+                        } else {
+                            wcs[wc.i].sec += sec
+                            wc.job.d += sec
+                        }
+                    }
+                    )
+
+                    // bottleneck.sec -= job.d;
+                    // job.op.wcCount--
+                    // let newBottleneck;
+                    // job.op.wcs
+                    //     .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                    //     .forEach(wc => {
+                    //         let sec = job.d / job.op.wcCount
+                    //         wcs[wc.i].sec += sec
+                    //         wc.job.d += sec
+                    //         if (wcs[wc.i].sec > bottleneck.sec) {
+                    //             newBottleneck = wcs[wc.i];
+                    //         }
+                    //     })
+                    // job.d = 0
+                    // if (newBottleneck || (nextBottleneck.sec > bottleneck.sec))
+                    //     break
+                }
+                InitChart(wcs);
+            }
+            InitChart(wcs);
             return wcs
         }
 
@@ -314,8 +483,12 @@
 
 
         function opt6(ops, wcs, wcArr) {
+            var wcInitArr = new Array(wcs.length)
+            for (let i = 0; i < wcInitArr.length; i++) {
+                wcInitArr[i] = wcs[i].sec
+            }
             function f(jobs) {
-                let ww = jobs.reduce((ws, job, j) => { ws[job] += ops[j].d; return ws }, new Array(wcs.length).fill(0))
+                let ww = jobs.reduce((ws, job, j) => { ws[job] += ops[j].d; return ws }, wcInitArr.slice())
                 // let res = ww.reduce((s, wc) => s + wc * wc, 0)
                 // console.log(res)
                 let res = Math.max.apply(null, ww)
