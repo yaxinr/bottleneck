@@ -98,7 +98,12 @@
                     op.wcCount = op.wcs.length
                     return op
                 })
-                if (true) {
+                if (document.getElementById('calcBest').checked) {
+                    const label = document.createElement('div')
+                    label.style.paddingTop = '20px'
+                    label.innerText = 'BEST RESULT'
+                    gants.appendChild(label)
+
                     let wcs = wcs0
                         .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
                     // ops = ops0.map((op, i) => {
@@ -112,7 +117,7 @@
                 }
                 var wcs = wcs0
                     .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
-                const a = opt8(ops, wcs)
+                const a = opt4(ops, wcs)
                 // InitChart(a, m);
             }
         });
@@ -659,11 +664,8 @@
         <label>workcenters count</label>
         <input id="wcCount" type="number" size="40">
         <br>
-        <label> distance</label>
-        <input id="d" type="text" size="40" readonly>
-        <br>
-        <label>time</label>
-        <input id="t" type="text" size="40" readonly>
+        <label>Calc best (полный перебор)</label>
+        <input id="calcBest" type="checkbox" size="40">
         <br>
         <button id='calcButton'>Calculate</button>
     </fieldset>
