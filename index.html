@@ -60,16 +60,17 @@
                 // const a = opt2(wcArr, ops)
                 // const a = opt(wcArr)
                 //const a = opt3(wcArr)
-                let wcCount = document.getElementById('wcCount').value
+                let wcCount = document.getElementById('wcCount').value || 3
                 var wcs0 = []
                 // .map((a, i) => { return { id: i, sec: 0, jobs: [] } })
                 for (let i = 0; i < wcCount; i++) {
-                    let sec = 1 + Math.floor(Math.random() * 100)
-                    //let sec = 0
+                    //let sec = 1 + Math.floor(Math.random() * 100)
+                    let sec = 0
                     const op = { id: -1, wcs: [i], d: sec, wcCount: 0 }
                     const job = { op, d: sec }
                     wcs0.push({ id: i, sec, jobs: [job] })
                 }
+
                 let opCount = document.getElementById('opCount').value
                 var ops0 = []
                 for (let i = 0; i < opCount; i++) {
@@ -81,6 +82,7 @@
                     }
                     ops0.push({ wcs: ws.sort(), d: 1 + Math.floor(Math.random() * 100) })
                 }
+
                 // var ops0 = [
                 //     { wcs: [0, 1], d: 35 },
                 //     { wcs: [0, 1], d: 35 },
@@ -117,7 +119,8 @@
                 }
                 var wcs = wcs0
                     .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
-                const a = opt4(ops, wcs)
+                const a = opt9(ops, wcs)
+                //const a = opt4(ops, wcs)
                 // InitChart(a, m);
             }
         });
@@ -397,6 +400,53 @@
                 }
             }
             InitChart(wcs);
+            return wcs
+        }
+
+        function opt9(ops, wcs, wcArr) {
+            ops.forEach((op) => {
+                op.wcs.forEach(wc => {
+                    const job = { op, d: op.d / op.wcs.length }
+                    wcs[wc.i].jobs.push(job)
+                    wcs[wc.i].sec += job.d
+                    wc.job = job
+                })
+            });
+            InitChart(wcs);
+            var ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                .sort((a, b) => a.sec - b.sec)
+            while (ws.length > 1) {
+                let lowloadWc = ws[0]
+                let nextLowloadWc = ws[1]
+                while (true) {
+                    let job = lowloadWc.jobs
+                        .filter(job => job.d > 0 && job.op.wcCount > 1)
+                        .sort((a, b) => b.op.d - a.op.d)
+                    [0]
+                    if (!job) break;
+                    lowloadWc.sec -= job.d;
+                    lowloadWc.sec += job.op.d;
+                    job.op.wcCount = 1
+                    let newBottleneck;
+                    job.op.wcs
+                        .filter(wc => wc.i != lowloadWc.id && wc.job.d > 0)
+                        .forEach(wc => {
+                            let sec = job.d;// / job.op.wcCount
+                            wcs[wc.i].sec -= sec
+                            wc.job.d -= sec
+                            if (wcs[wc.i].sec < lowloadWc.sec) {
+                                newBottleneck = wcs[wc.i];
+                            }
+                        })
+                    job.d = job.op.d
+                    InitChart(wcs);
+                    if (newBottleneck || (nextLowloadWc.sec < lowloadWc.sec))
+                        break
+                }
+                ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                    .sort((a, b) => a.sec - b.sec)
+                // InitChart(wcs);
+            }
             return wcs
         }
 
@@ -729,7 +779,7 @@
                 gant.appendChild(div)
             });
 
-        } 
+        }
     </script>
 </head>
 
