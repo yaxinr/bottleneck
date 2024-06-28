@@ -71,7 +71,7 @@
                     wcs0.push({ id: i, sec, jobs: [job] })
                 }
 
-                let opCount = document.getElementById('opCount').value
+                let opCount = document.getElementById('opCount').value || 7
                 var ops0 = []
                 for (let i = 0; i < opCount; i++) {
                     let ws = []
@@ -545,92 +545,129 @@
         }
 
         function opt4byMachinesCount(ops, wcs, wcArr) {
-            {
-                ops
-                    // .filter(op => op.wcs.length == wcLen)
-                    // .sort((a, b) => a.wcs.length - b.wcs.length)
-                    // .sort((a, b) => b.wcs.length - a.wcs.length)
-                    .forEach((op) => {
-                        op.wcs.forEach(wc => {
-                            const job = { op, d: op.d / op.wcs.length }
-                            wcs[wc.i].jobs.push(job)
-                            wcs[wc.i].sec += job.d
-                            wc.job = job
-                        })
-                    });
+            let jobs = []
+            ops
+                // .filter(op => op.wcs.length == wcLen)
+                // .sort((a, b) => a.wcs.length - b.wcs.length)
+                // .sort((a, b) => b.wcs.length - a.wcs.length)
+                .forEach((op) => {
+                    op.wcs.forEach(wc => {
+                        const job = { op, d: op.d / op.wcs.length, machinesCount: op.wcs.length }
+                        let machine = wcs[wc.i]
+                        machine.jobs.push(job)
+                        machine.sec += job.d
+                        wc.job = job
+                        wc.machine = machine
+                        jobs.push(job)
+                    })
+                });
+            InitChart(wcs);
+            // var groupBy = function (xs, key) {
+            //     return xs.reduce(function (rv, x) {
+            //         (rv[x[key]] = rv[x[key]] || []).push(x);
+            //         return rv;
+            //     }, {});
+            // };
+            fops(ops.sort((a, b) => b.d - a.d))
+            return
+            opsByMachinesCount = Object.groupBy(ops, op => op.wcs.length)
+            console.log(opsByMachinesCount)
+            let keys = Object.keys(opsByMachinesCount)
+            console.log(keys);
+            let maxMachinesCount = Math.max(...keys)
+            for (let machineCount = 2; machineCount <= maxMachinesCount; machineCount++) {
+                console.log(machineCount);
+                const mOps = opsByMachinesCount[machineCount].sort((a, b) => b.d - a.d);
+                fops(mOps)
                 InitChart(wcs);
-                // var sortedWcs = wcs.slice().sort((a, b) => b.sec - a.sec)
-                // InitChart(sortedWcs);
-                var ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
-                    .sort((a, b) => b.sec - a.sec)
-                InitChart(wcs);
-                while (ws.length > 1) {
-                    let bottleneck = ws[0]
-                    let nextBottleneck = ws[1]
-                    // let wcsBottleneckLess = wcs.slice()
-                    // wcsBottleneckLess.splice(bottleneck.id, 1)
-                    while (true) {
-                        let job = bottleneck.jobs
-                            .filter(job => job.d > 0 && job.op.wcCount > 1)
-                            // .sort((a, b) => a.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0) - b.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0))
-                            .sort((a, b) => {
-                                return a.op.wcCount - b.op.wcCount || b.d - a.d
-                                // return (a.d < b.d) ? -1 : 1
-                                // let dif =
-                                //     a.op.wcs
-                                //         .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
-                                //         .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
-                                //         .sec
-                                //     -
-                                //     b.op.wcs
-                                //         .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
-                                //         .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
-                                //         .sec;
-                                // // dif = 0
-                                // return dif > 0 ? -1
-                                //     : (dif < 0) ? 1
-                                //         : (a.d > b.d) ? -1 : 1
-                            }
-                            )
-                        [0]
-                        // .find(job => job.d > 0 && job.op.wcCount > 1)
-                        // InitChart(wcs);
-                        if (!job) break;
-                        bottleneck.sec += job.op.d - job.d;
-                        job.op.wcCount = 0
-                        let newBottleneck;
-                        job.op.wcs
-                            .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
-                            .forEach(wc => {
-                                let sec = wc.job.d // job.op.wcCount
-                                wcs[wc.i].sec -= sec
-                                wc.job.d = 0
-                                if (wcs[wc.i].sec > bottleneck.sec) {
-                                    newBottleneck = wcs[wc.i];
-                                }
-                            })
-                        // job.d = 0
-                        if (newBottleneck || (nextBottleneck.sec > bottleneck.sec))
-                            break
-                        // if (newBottleneck) {
-                        //     let b = bottleneck
-                        //     bottleneck = (nextBottleneck.sec > newBottleneck.sec)
-                        //         ? nextBottleneck
-                        //         : newBottleneck
-                        //     nextBottleneck = b
-                        // } else {
-                        //     if (nextBottleneck.sec > bottleneck.sec) {
-                        //         let b = bottleneck
-                        //         bottleneck = nextBottleneck
-                        //         nextBottleneck = b
-                        //     }
-                        // }
-                        InitChart(wcs);
+            }
+            return
+            function fops(ops) {
+                ops.forEach(op => {
+                    console.log(op);
+                    let machinesSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
+                    console.log(machinesSorted);
+                    machinesSorted[0].machine.sec += op.d - machinesSorted[0].job.d
+                    machinesSorted[0].job.d = machinesSorted[0].job.op.d
+                    for (let i = 1; i < machinesSorted.length; i++) {
+                        let alt = machinesSorted[i]
+                        alt.machine.sec -= alt.job.d
+                        alt.job.d = 0
                     }
-                    ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
-                        .sort((a, b) => b.sec - a.sec)
+                    InitChart(wcs);
+                });
+            }
+            // var sortedWcs = wcs.slice().sort((a, b) => b.sec - a.sec)
+            // InitChart(sortedWcs);
+            var ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                .sort((a, b) => b.sec - a.sec)
+            InitChart(wcs);
+            while (ws.length > 1) {
+                let bottleneck = ws[0]
+                let nextBottleneck = ws[1]
+                // let wcsBottleneckLess = wcs.slice()
+                // wcsBottleneckLess.splice(bottleneck.id, 1)
+                while (true) {
+                    let job = bottleneck.jobs
+                        .filter(job => job.d > 0 && job.op.wcCount > 1)
+                        // .sort((a, b) => a.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0) - b.op.wcs.reduce((s, w) => { return s + wcs[w.i].sec }, 0))
+                        .sort((a, b) => {
+                            return a.op.wcCount - b.op.wcCount || b.d - a.d
+                            // return (a.d < b.d) ? -1 : 1
+                            // let dif =
+                            //     a.op.wcs
+                            //         .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                            //         .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                            //         .sec
+                            //     -
+                            //     b.op.wcs
+                            //         .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                            //         .reduce((s, w) => { return s ? (wcs[w.i].sec > s.sec ? wcs[w.i] : s) : wcs[w.i] }, null)
+                            //         .sec;
+                            // // dif = 0
+                            // return dif > 0 ? -1
+                            //     : (dif < 0) ? 1
+                            //         : (a.d > b.d) ? -1 : 1
+                        }
+                        )
+                    [0]
+                    // .find(job => job.d > 0 && job.op.wcCount > 1)
+                    // InitChart(wcs);
+                    if (!job) break;
+                    bottleneck.sec += job.op.d - job.d;
+                    job.op.wcCount = 0
+                    let newBottleneck;
+                    job.op.wcs
+                        .filter(wc => wc.i != bottleneck.id && wc.job.d > 0)
+                        .forEach(wc => {
+                            let sec = wc.job.d // job.op.wcCount
+                            wcs[wc.i].sec -= sec
+                            wc.job.d = 0
+                            if (wcs[wc.i].sec > bottleneck.sec) {
+                                newBottleneck = wcs[wc.i];
+                            }
+                        })
+                    // job.d = 0
+                    if (newBottleneck || (nextBottleneck.sec > bottleneck.sec))
+                        break
+                    // if (newBottleneck) {
+                    //     let b = bottleneck
+                    //     bottleneck = (nextBottleneck.sec > newBottleneck.sec)
+                    //         ? nextBottleneck
+                    //         : newBottleneck
+                    //     nextBottleneck = b
+                    // } else {
+                    //     if (nextBottleneck.sec > bottleneck.sec) {
+                    //         let b = bottleneck
+                    //         bottleneck = nextBottleneck
+                    //         nextBottleneck = b
+                    //     }
+                    // }
                     InitChart(wcs);
                 }
+                ws = wcs.filter(wc => wc.jobs.filter(job => job.d > 0 && job.op.wcCount > 1).length > 0)
+                    .sort((a, b) => b.sec - a.sec)
+                InitChart(wcs);
             }
             InitChart(wcs);
             return wcs
