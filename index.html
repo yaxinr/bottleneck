@@ -583,7 +583,7 @@
             }
             return
             function fops(ops) {
-                ops.forEach(op => {
+                ops.filter(op => op.wcs.length > 1).forEach(op => {
                     console.log(op);
                     let machinesSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
                     console.log(machinesSorted);
