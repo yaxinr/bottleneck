@@ -66,21 +66,24 @@
                 for (let i = 0; i < wcCount; i++) {
                     //let sec = 1 + Math.floor(Math.random() * 100)
                     let sec = 0
-                    const op = { id: -1, wcs: [i], d: sec, wcCount: 0 }
+                    const op = { id: -1, wcs: [{ i, sec }], d: sec, wcCount: 0 }
                     const job = { op, d: sec }
                     wcs0.push({ id: i, sec, jobs: [job] })
                 }
 
                 let opCount = document.getElementById('opCount').value || 7
                 var ops0 = []
-                for (let i = 0; i < opCount; i++) {
+                for (let j = 0; j < opCount; j++) {
                     let ws = []
-                    for (let j = 0; j < Math.random() * wcCount; j++) {
-                        wcId = Math.floor(Math.random() * wcCount)
-                        if (!ws.includes(wcId))
-                            ws.push(wcId)
+                    let d = 1 + Math.floor(Math.random() * 100)
+                    for (let i = 0; i < wcCount; i++) {
+                        if (Math.random() > 0.5)
+                            ws.push({ i, sec: d })
                     }
-                    ops0.push({ wcs: ws.sort(), d: 1 + Math.floor(Math.random() * 100) })
+                    if (ws.length == 0) ws.push({ i: Math.floor(Math.random() * wcCount), sec: d })
+                    if (Math.random() > 0.8)
+                        ws[Math.floor(Math.random() * ws.length)].sec -= d * 0.2
+                    ops0.push({ wcs: ws, d })
                 }
 
                 // var ops0 = [
@@ -96,7 +99,7 @@
                 console.log(ops0)
                 ops = ops0.map((op, i) => {
                     op.id = i
-                    op.wcs = op.wcs.map(i => { return { i } })
+                    // op.wcs = op.wcs.map(i => { return { i } })
                     op.wcCount = op.wcs.length
                     return op
                 })
@@ -551,13 +554,14 @@
                 // .sort((a, b) => a.wcs.length - b.wcs.length)
                 // .sort((a, b) => b.wcs.length - a.wcs.length)
                 .forEach((op) => {
-                    op.wcs.forEach(wc => {
-                        const job = { op, d: op.d / op.wcs.length, machinesCount: op.wcs.length }
-                        let machine = wcs[wc.i]
+                    op.wcs.forEach(alt => {
+                        var sec = alt.sec
+                        const job = { op, sec, d: sec / op.wcs.length, machinesCount: op.wcs.length }
+                        let machine = wcs[alt.i]
                         machine.jobs.push(job)
                         machine.sec += job.d
-                        wc.job = job
-                        wc.machine = machine
+                        alt.job = job
+                        alt.machine = machine
                         jobs.push(job)
                     })
                 });
@@ -568,7 +572,36 @@
             //         return rv;
             //     }, {});
             // };
-            fops(ops.sort((a, b) => b.d - a.d))
+            var sortOps = ops.sort((a, b) => b.d - a.d)
+            fops(sortOps)
+            console.log(`changes`);
+            var count = 0;
+            do {
+                count = fops2(sortOps)
+            } while (count > 0)
+            function fops2(ops) {
+                var count = 0;
+                sortOps.filter(op => op.wcs.length > 1).forEach(op => {
+                    console.log(op);
+                    let machinesSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
+                    console.log(machinesSorted);
+                    var firstAlt = machinesSorted[0]
+                    if (op.machine != firstAlt.machine && (firstAlt.machine.sec < (op.machine.sec - op.d))) {
+                        console.log(`change ${firstAlt.machine.sec} ${op.machine.sec} ${op.d}`);
+                        firstAlt.machine.sec += firstAlt.job.sec
+                        firstAlt.job.d = firstAlt.job.sec
+                        op.machine = firstAlt.machine
+                        count++;
+                        for (let i = 1; i < machinesSorted.length; i++) {
+                            let alt = machinesSorted[i]
+                            alt.machine.sec -= alt.job.d
+                            alt.job.d = 0
+                        }
+                        InitChart(wcs);
+                    }
+                });
+                return count;
+            }
             return
             opsByMachinesCount = Object.groupBy(ops, op => op.wcs.length)
             console.log(opsByMachinesCount)
@@ -585,12 +618,14 @@
             function fops(ops) {
                 ops.filter(op => op.wcs.length > 1).forEach(op => {
                     console.log(op);
-                    let machinesSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
-                    console.log(machinesSorted);
-                    machinesSorted[0].machine.sec += op.d - machinesSorted[0].job.d
-                    machinesSorted[0].job.d = machinesSorted[0].job.op.d
-                    for (let i = 1; i < machinesSorted.length; i++) {
-                        let alt = machinesSorted[i]
+                    let altsSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
+                    console.log(altsSorted);
+                    var firstAlt = altsSorted[0]
+                    firstAlt.machine.sec += firstAlt.job.sec - firstAlt.job.d
+                    firstAlt.job.d = firstAlt.job.sec
+                    op.machine = firstAlt.machine
+                    for (let i = 1; i < altsSorted.length; i++) {
+                        let alt = altsSorted[i]
                         alt.machine.sec -= alt.job.d
                         alt.job.d = 0
                     }
