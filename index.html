@@ -68,7 +68,7 @@
                     let sec = 0
                     const op = { id: -1, wcs: [{ i, sec }], d: sec, wcCount: 0 }
                     const job = { op, d: sec }
-                    wcs0.push({ id: i, sec, jobs: [job] })
+                    wcs0.push({ id: i, sec, jobs: [job], linked: Math.random() > 0.8 })
                 }
 
                 let opCount = document.getElementById('opCount').value || 7
@@ -81,8 +81,13 @@
                             ws.push({ i, sec: d })
                     }
                     if (ws.length == 0) ws.push({ i: Math.floor(Math.random() * wcCount), sec: d })
-                    if (Math.random() > 0.8)
-                        ws[Math.floor(Math.random() * ws.length)].sec -= d * 0.2
+                    if (Math.random() > 0.8) {
+                        let alt = ws[Math.floor(Math.random() * ws.length)]
+                        if (wcs0[alt.i].linked) {
+                            alt.sec -= d * 0.2
+                            alt.linked = true
+                        }
+                    }
                     ops0.push({ wcs: ws, d })
                 }
 
@@ -103,6 +108,7 @@
                     op.wcCount = op.wcs.length
                     return op
                 })
+                function getMachine(wc) { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice(), linked: wc.linked } }
                 if (document.getElementById('calcBest').checked) {
                     const label = document.createElement('div')
                     label.style.paddingTop = '20px'
@@ -110,7 +116,7 @@
                     gants.appendChild(label)
 
                     let wcs = wcs0
-                        .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
+                        .map(getMachine)
                     // ops = ops0.map((op, i) => {
                     //     op.id = i
                     //     op.wcs = op.wcs.map(i => { return { i, wc: wcs[i] } })
@@ -121,7 +127,7 @@
                     const best = optPerebor(ops, wcs)
                 }
                 var wcs = wcs0
-                    .map((wc) => { return { id: wc.id, sec: wc.sec, jobs: wc.jobs.slice() } })
+                    .map(getMachine)
                 // const a = opt1(ops, wcs)
                 //const a = optLowLoadedMachine(ops, wcs)
                 // const a = opt41(ops, wcs)
@@ -548,23 +554,51 @@
         }
 
         function opt4byMachinesCount(ops, wcs, wcArr) {
-            let jobs = []
+            // let jobs = []
             ops
                 // .filter(op => op.wcs.length == wcLen)
                 // .sort((a, b) => a.wcs.length - b.wcs.length)
                 // .sort((a, b) => b.wcs.length - a.wcs.length)
                 .forEach((op) => {
+                    let alts = op.wcs
+                    // let linked = false
+                    op.wcs.forEach(alt => {
+                        alt.op = op
+                        if (alt.linked) op.linked = true
+                    })
+                    // for (let i = 0; i < alts.length; i++) {
+                    //     const alt = alts[i];
+                    //     if (alt.linked) {
+                    //         var sec = alt.sec
+                    //         // const job = { op, sec, d: sec, machinesCount: op.wcs.length }
+                    //         let machine = wcs[alt.i]
+                    //         machine.jobs.push(alt)
+                    //         machine.sec += sec
+                    //         // alt.job = job
+                    //         alt.machine = machine
+                    //         // jobs.push(job)
+                    //         op.wcCount = 1
+                    //         linked = true
+                    //         op.linked = true
+                    //     }
+                    // }
+                    if (op.linked)
+                        op.wcCount = 1
                     op.wcs.forEach(alt => {
                         var sec = alt.sec
-                        const job = { op, sec, d: sec / op.wcs.length, machinesCount: op.wcs.length }
+                        var mCount = alt.linked ? 1 : op.wcs.length
+                        let d = (op.linked && !alt.linked) ? 0 : sec / mCount
+                        // const job = { op, sec, d: sec / mCount, machinesCount: op.wcs.length }
                         let machine = wcs[alt.i]
-                        machine.jobs.push(job)
-                        machine.sec += job.d
-                        alt.job = job
+                        machine.jobs.push(alt)
+                        machine.sec += d
+                        alt.d = d
+                        // alt.job = job
                         alt.machine = machine
-                        jobs.push(job)
+                        // jobs.push(job)
                     })
                 });
+            wcs.forEach((machine) => { machine.hasLinked = machine.jobs.some(alt => alt.linked) })
             InitChart(wcs);
             // var groupBy = function (xs, key) {
             //     return xs.reduce(function (rv, x) {
@@ -577,25 +611,25 @@
             console.log(`changes`);
             var count = 0;
             do {
-                count = fops2(sortOps)
+                count = opMachineChange(sortOps)
             } while (count > 0)
-            function fops2(ops) {
+            function opMachineChange(ops) {
                 var count = 0;
-                sortOps.filter(op => op.wcs.length > 1).forEach(op => {
+                ops.filter(op => op.wcs.length > 1 && !op.linked).forEach(op => {
                     console.log(op);
                     let machinesSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
                     console.log(machinesSorted);
                     var firstAlt = machinesSorted[0]
                     if (op.machine != firstAlt.machine && (firstAlt.machine.sec < (op.machine.sec - op.d))) {
                         console.log(`change ${firstAlt.machine.sec} ${op.machine.sec} ${op.d}`);
-                        firstAlt.machine.sec += firstAlt.job.sec
-                        firstAlt.job.d = firstAlt.job.sec
+                        firstAlt.machine.sec += firstAlt.sec
+                        firstAlt.d = firstAlt.sec
                         op.machine = firstAlt.machine
                         count++;
                         for (let i = 1; i < machinesSorted.length; i++) {
                             let alt = machinesSorted[i]
-                            alt.machine.sec -= alt.job.d
-                            alt.job.d = 0
+                            alt.machine.sec -= alt.d
+                            alt.d = 0
                         }
                         InitChart(wcs);
                     }
@@ -616,18 +650,23 @@
             }
             return
             function fops(ops) {
-                ops.filter(op => op.wcs.length > 1).forEach(op => {
+                ops.filter(op => op.wcs.length > 1 && !op.linked).forEach(op => {
                     console.log(op);
-                    let altsSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
+                    let alts = op.wcs
+                    let notLinkedAlts = alts.filter(a => !(a.linked || a.machine.hasLinked))
+                    if (notLinkedAlts.length > 0 && notLinkedAlts.length != alts.length)
+                        alts = notLinkedAlts
+                    let altsSorted = alts.sort((a, b) => a.machine.sec - b.machine.sec)
                     console.log(altsSorted);
                     var firstAlt = altsSorted[0]
-                    firstAlt.machine.sec += firstAlt.job.sec - firstAlt.job.d
-                    firstAlt.job.d = firstAlt.job.sec
+                    firstAlt.machine.sec += firstAlt.sec - firstAlt.d
+                    firstAlt.d = firstAlt.sec
                     op.machine = firstAlt.machine
+                    op.wcCount = 1
                     for (let i = 1; i < altsSorted.length; i++) {
                         let alt = altsSorted[i]
-                        alt.machine.sec -= alt.job.d
-                        alt.job.d = 0
+                        alt.machine.sec -= alt.d
+                        alt.d = 0
                     }
                     InitChart(wcs);
                 });
@@ -1104,27 +1143,29 @@
             const gant = document.createElement('div')
             gant.style.paddingTop = '20px'
             gants.appendChild(gant)
-            wcArr.forEach((wc, wcI) => {
+            wcArr.forEach((machine, wcI) => {
                 const div = document.createElement("div");
                 div.style.height = '20px';
                 div.style.display = 'flex'
-                const span0 = document.createElement('span')
-                span0.innerText = wc.id
-                div.appendChild(span0)
-                wc.jobs.filter(job => !job.deleted && job.d > 0).forEach(job => {
+                const machineSpan = document.createElement('span')
+                machineSpan.innerText = machine.id
+                machineSpan.style.fontWeight = machine.linked ? 'bold' : ''
+                div.appendChild(machineSpan)
+                machine.jobs.filter(job => !job.deleted && job.d > 0).forEach(job => {
                     const jobSpan = document.createElement('span')
-                    jobSpan.innerText = `${job.op.id}-${job.op.wcs.map(w => w.i).join(',')}`
+                    jobSpan.innerText = `${job.op.id}-${job.op.wcs.map(a => (a.linked ? 'L' : '') + a.i).join(',')}`
                     jobSpan.style.width = `${job.d * 5}px`
                     jobSpan.style.backgroundColor = intToRGB(job.op.id + 1, 0.8, 9)
                     jobSpan.style.display = 'inline-block'
-                    jobSpan.style.fontWeight = job.op.wc ? 'bold' : ''
+                    // jobSpan.style.fontWeight = job.op.wc ? 'bold' : ''
                     jobSpan.style.fontWeight = job.op.wcCount > 1 ? '' : 'bold'
-                    jobSpan.style.fontStyle = job.op.wc ? '' : 'italic'
+                    // jobSpan.style.fontStyle = job.op.linked ? '' : 'italic'
+                    jobSpan.style.fontStyle = job.op.linked ? 'italic' : ''
                     jobSpan.title = `${job.d}=${job.op.wcs.map(w => w.i).join(',')}`
                     div.appendChild(jobSpan)
                 })
                 const spanSec = document.createElement('span')
-                spanSec.innerText = wc.sec
+                spanSec.innerText = machine.sec
                 spanSec.style.backgroundColor = 'lime'
                 spanSec.style.marginLeft = '10px'
                 div.appendChild(spanSec)
