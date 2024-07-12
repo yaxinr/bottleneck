@@ -70,7 +70,7 @@
                     let sec = 0
                     const op = { id: -1, wcs: [{ i, sec }], d: sec, wcCount: 0 }
                     const job = { op, d: sec }
-                    wcs0.push({ id: i, sec, jobs: [job], linked: Math.random() > 0.8 })
+                    wcs0.push({ id: i, sec, jobs: [job], linked: Math.random() > 0.7 })
                 }
 
                 let opCount = document.getElementById('opCount').value
@@ -571,10 +571,13 @@
                     alt.machine = machine
                     machine.jobs.push(alt)
                     machine.sec += d
-                    if (alt.linked) op.machine = machine
+                    if (alt.linked) {
+                        op.machine = machine
+                        machine.hasLinked = true
+                    }
                 })
             });
-            wcs.forEach((machine) => { machine.hasLinked = machine.jobs.some(alt => alt.linked) })
+            // wcs.forEach((machine) => { machine.hasLinked = machine.jobs.some(alt => alt.linked) })
             InitChart(wcs);
             // var groupBy = function (xs, key) {
             //     return xs.reduce(function (rv, x) {
@@ -592,9 +595,9 @@
             console.log(`linked changes`);
             ops.filter(op => op.linked).forEach(op => {
                 console.log(op);
-                let machinesSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
-                console.log(machinesSorted);
-                var firstAlt = machinesSorted[0]
+                var altSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
+                console.log(altSorted);
+                var firstAlt = altSorted[0]
                 console.log(op.machine);
                 console.log(op.machine.sec);
                 console.log(firstAlt.machine.sec + firstAlt.sec);
@@ -604,8 +607,8 @@
                     firstAlt.d = firstAlt.sec
                     op.machine = firstAlt.machine
                     count++;
-                    for (let i = 1; i < machinesSorted.length; i++) {
-                        let alt = machinesSorted[i]
+                    for (let i = 1; i < altSorted.length; i++) {
+                        let alt = altSorted[i]
                         alt.machine.sec -= alt.d
                         alt.d = 0
                     }
