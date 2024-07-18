@@ -578,6 +578,8 @@
                 })
             });
             // wcs.forEach((machine) => { machine.hasLinked = machine.jobs.some(alt => alt.linked) })
+            wcs.forEach((machine) => { machine.loadSec = machine.sec })
+            console.table(wcs)
             InitChart(wcs);
             // var groupBy = function (xs, key) {
             //     return xs.reduce(function (rv, x) {
@@ -618,31 +620,61 @@
             function fops(ops) {
                 ops.filter(op => op.wcs.length > 1 && !op.linked).forEach(op => {
                     console.log(op);
-                    let alts = op.wcs
-                    let altsSorted = alts.sort((a, b) => a.machine.linked - b.machine.linked || a.machine.sec - b.machine.sec)
-                    console.log(altsSorted);
-                    var firstAlt = altsSorted[0]
-                    firstAlt.machine.sec += firstAlt.sec - firstAlt.d
-                    firstAlt.d = firstAlt.sec
-                    op.machine = firstAlt.machine
-                    op.wcCount = 1
-                    for (let i = 1; i < altsSorted.length; i++) {
-                        let alt = altsSorted[i]
-                        alt.machine.sec -= alt.d
-                        alt.d = 0
+                    if (!op.machine) {
+                        let altsSorted = op.wcs.slice().sort((a, b) => a.machine.linked - b.machine.linked || a.machine.sec - b.machine.sec)
+                        console.log('altsSorted1')
+                        console.table(altsSorted.map(a => a.machine))
+                        var firstAlt = altsSorted[0]
+                        let altsLoadSorted = op.wcs.filter(a => !a.machine.linked).slice().sort((a, b) => b.machine.loadSec - a.machine.loadSec)
+                        if (altsLoadSorted.length > 0 && firstAlt != altsLoadSorted[altsLoadSorted.length - 1]) {
+                            console.log('altsLoadSorted')
+                            console.table(altsLoadSorted.map(a => a.machine))
+                            for (let i = 0; i < altsLoadSorted.length; i++) {
+                                let alt1 = altsLoadSorted[i]
+                                if (alt1.machine.sec >= firstAlt.machine.sec) continue
+                                let jobs = alt1.machine.jobs.filter(a => !a.op.machine && a.op.wcs.length > 1 && !a.op.linked).slice()
+                                jobs.sort((a, b) => a.sec - b.sec)
+                                for (let j = 0; j < jobs.length; j++) {
+                                    let alt = jobs[j]
+                                    alt.op.machine = alt1.machine
+                                    alt1.machine.sec += alt1.sec - alt1.d
+                                    alt1.d = alt1.sec
+                                    alt.op.wcCount = 1
+                                    alt.op.wcs.filter(alt2 => alt2 != alt).forEach(alt2 => {
+                                        alt2.machine.sec -= alt2.d
+                                        alt2.d = 0
+                                    })
+                                    InitChart(wcs);
+                                    if (alt1.machine.sec > firstAlt.machine.sec) break
+                                }
+                            }
+                            altsSorted = op.wcs.slice().sort((a, b) => a.machine.linked - b.machine.linked || a.machine.sec - b.machine.sec)
+                            console.log('altsSorted2')
+                            console.table(altsSorted.map(a => a.machine))
+                            firstAlt = altsSorted[0]
+                        }
+                        firstAlt.machine.sec += firstAlt.sec - firstAlt.d
+                        firstAlt.d = firstAlt.sec
+                        op.machine = firstAlt.machine
+                        op.wcCount = 1
+                        for (let i = 1; i < altsSorted.length; i++) {
+                            let alt = altsSorted[i]
+                            alt.machine.sec -= alt.d
+                            alt.d = 0
+                        }
+                        InitChart(wcs);
                     }
-                    InitChart(wcs);
                 });
             }
             function opMachineChange(ops) {
                 var count = 0;
                 ops.filter(op => op.wcs.length > 1 && !op.linked).forEach(op => {
                     console.log(op);
-                    let altSorted = op.wcs.sort((a, b) => a.machine.sec - b.machine.sec)
+                    let altSorted = op.wcs.sort((a, b) => a.machine.linked - b.machine.linked || a.machine.sec - b.machine.sec)
                     console.log(altSorted);
                     var firstAlt = altSorted[0]
                     if (op.machine != firstAlt.machine && ((firstAlt.machine.sec + firstAlt.sec) < op.machine.sec)) {
-                        console.log(`change ${firstAlt.machine.sec} ${op.machine.sec} ${op.d}`);
+                        console.log(`change opId=${op.id} machine1Sec=${firstAlt.machine.sec} curOpMachSec=${op.machine.sec} opD=${op.d}`);
                         firstAlt.machine.sec += firstAlt.sec
                         firstAlt.d = firstAlt.sec
                         op.machine = firstAlt.machine
